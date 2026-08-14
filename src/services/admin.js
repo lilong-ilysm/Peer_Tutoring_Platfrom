@@ -73,6 +73,20 @@ export function platformStats() {
     'SELECT COUNT(*) AS total, AVG(rating) AS average FROM reviews WHERE is_hidden = 0'
   );
 
+  // Subjects that a student can actually find a tutor for. The catalogue count
+  // and this number are different facts, so the UI must not use one as the
+  // other: "15 subjects covered" was misleading when only 13 had a tutor.
+  const subjectsCovered = Number(
+    db.value(`
+      SELECT COUNT(DISTINCT ts.subject_id) AS c
+        FROM tutor_subjects ts
+        JOIN subjects s ON s.id = ts.subject_id
+        JOIN tutor_profiles tp ON tp.user_id = ts.tutor_id
+        JOIN users u ON u.id = ts.tutor_id
+       WHERE s.is_active = 1 AND tp.is_published = 1 AND u.status = 'active'
+    `) || 0
+  );
+
   return {
     users: {
       total: Number(users?.total || 0),
@@ -81,6 +95,7 @@ export function platformStats() {
       suspended: Number(users?.suspended || 0),
     },
     tutorsPublished: published,
+    subjectsCovered,
     bookings: {
       total: Number(bookings?.total || 0),
       pending: Number(bookings?.pending || 0),

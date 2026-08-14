@@ -45,12 +45,13 @@ export function registerPublicRoutes(router) {
     }
     const stats = platformStats();
     ctx.render({
-      title: 'Peer tutoring for students, by students',
+      title: 'Find a peer tutor',
       activeNav: 'home',
       body: landingPage({
         stats: {
           tutors: stats.tutorsPublished,
-          subjects: stats.subjects,
+          // Subjects a student can actually book, not the size of the catalogue.
+          subjectsCovered: stats.subjectsCovered,
           completedSessions: stats.bookings.completed,
         },
         featured: featuredTutors(3),

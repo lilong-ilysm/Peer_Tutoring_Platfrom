@@ -7,9 +7,15 @@ actually bookable, request a session, and build a public record of sessions and 
 Built as a server-rendered Node.js application with **zero runtime dependencies** — no build step,
 no package installs, no external database server.
 
-- Full product and technical specification: [`docs/01-product-spec.md`](docs/01-product-spec.md)
-- Engineering decisions: [`docs/04-engineering-notes.md`](docs/04-engineering-notes.md)
-- Review and QA records: [`docs/02-pm-review.md`](docs/02-pm-review.md), [`docs/03-qa-report.md`](docs/03-qa-report.md)
+| Document | Contents |
+|---|---|
+| [`docs/01-product-spec.md`](docs/01-product-spec.md) | Scope, features, user flows, pages, UI/UX direction, data model, 50 acceptance criteria |
+| [`docs/02-pm-review.md`](docs/02-pm-review.md) | Project Manager audits (4 rounds) with a verdict and evidence per criterion |
+| [`docs/03-qa-report.md`](docs/03-qa-report.md) | QA bug reports, adversarial testing, retest results |
+| [`docs/04-engineering-notes.md`](docs/04-engineering-notes.md) | Stack decisions, trade-offs, what was and was not verified |
+| [`docs/05-design-review.md`](docs/05-design-review.md) | "Product or advertisement?" design review and the changes made |
+| [`docs/06-mobile-qa-report.md`](docs/06-mobile-qa-report.md) | Dedicated mobile test report with severities |
+| [`docs/07-aws-deployment.md`](docs/07-aws-deployment.md) | AWS Amplify assessment (**incompatible as built**) and the recommended AWS architecture |
 
 ---
 
@@ -237,21 +243,46 @@ instead of `0.0.0.0`. A `SESSION_SECRET must be set…` boot error means step 3 
 that check is deliberate. If the app starts but data resets on redeploy, the volume is not mounted at
 the path in `DATABASE_FILE`.
 
+### AWS
+
+A `Dockerfile` is included (Node 24 Alpine, no install step, non-root, health check). The
+recommended AWS shape is **ECS Fargate with an EFS volume mounted at `/data`**, or a Lightsail/EC2
+instance with an EBS volume.
+
+**AWS Amplify Hosting cannot host this application as built** — it targets framework build output
+(Next.js, or Nuxt/Astro/SvelteKit via adapters) and its compute has no persistent filesystem, while
+this app is a framework-free server with a SQLite file. The full assessment, including the three ways
+forward and their costs, is in [`docs/07-aws-deployment.md`](docs/07-aws-deployment.md). No AWS
+deployment has been performed: readiness was verified locally, but AWS access was unavailable.
+
 ### Backups
 
 The whole database is one file. With the volume mounted, copy `/data/peerlearn.db` (plus `-wal`
 and `-shm` if present) on a schedule, or run `sqlite3 /data/peerlearn.db ".backup /data/backup.db"`.
 
-## Accessibility and responsiveness
+## Mobile, accessibility and responsiveness
 
-Semantic landmarks, one `h1` per page, skip-to-content link, visible focus rings, real labels wired
-to inputs with `aria-describedby` / `aria-invalid`, status conveyed by text as well as colour,
-keyboard-operable menus (native `<details>`), 44px touch targets, and layouts verified at 320px,
-768px and 1280px. Admin tables restack into labelled rows on narrow screens instead of scrolling
-sideways.
+Mobile is designed, not scaled down:
 
-Automated checks cannot prove accessibility. Full conformance still needs manual testing with
-screen readers and expert review.
+- **Bottom navigation bar** below 720px — up to four thumb-reachable icon+label destinations,
+  generated from the same list as the desktop header nav so the two cannot drift apart. No
+  JavaScript, no hidden hamburger, no possibility of overflow.
+- **Filters collapse** into a labelled disclosure (with an active-filter count) below 900px, so
+  results are the first thing you see. Rendered open, so it still works with scripting disabled.
+- Statistics go two-up rather than forming a tall single column; bookable times render as a grid of
+  ≥48px targets; tabs, pagination and chips are ≥44px.
+- Long words and URLs wrap so nothing can push the viewport sideways; admin tables restack into
+  labelled rows.
+- Three breakpoints only, chosen by the layout: **900px**, **720px**, **420px**.
+
+Accessibility: semantic landmarks, one `h1` per page, skip-to-content link, visible focus rings, real
+labels wired with `aria-describedby` / `aria-invalid`, status conveyed by text as well as colour,
+keyboard-operable menus (native `<details>`), `aria-current` on the active nav item in both
+navigations, and no inline styles or scripts (so the strict CSP holds).
+
+**Not verified:** no browser or device emulator exists in this environment, so nothing here has been
+*seen* rendered. Layout, focus visibility, contrast in situ and screen-reader output need a human
+pass — see [`docs/06-mobile-qa-report.md`](docs/06-mobile-qa-report.md) section 4.
 
 ## Known limitations
 

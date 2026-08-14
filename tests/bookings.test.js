@@ -3,7 +3,7 @@ import test, { after, describe } from 'node:test';
 import config from '../src/config.js';
 import { DomainError } from '../src/lib/errors.js';
 import { nowIso } from '../src/lib/time.js';
-import { generateSlots } from '../src/services/availability.js';
+import { addTimeOff, generateSlots, listBlocks, removeBlock } from '../src/services/availability.js';
 import {
   acceptBooking,
   bookingCountsFor,
@@ -424,5 +424,76 @@ describe('visibility and lists', () => {
       startsAt: firstSlot(tutor.id).startsAt,
     });
     assert.equal(booking.subject_name, 'Extra Subject');
+  });
+});
+
+/**
+ * Audit scenario D: a tutor changes availability after a booking already exists.
+ * The agreed session must survive; the slot must stop being offered.
+ */
+describe('availability changes after a booking exists (scenario D)', () => {
+  test('removing the block does not touch the agreed session, but withdraws the slot', () => {
+    const { user: tutor, subject } = makeTutor({
+      blocks: [[0, 8 * 60, 20 * 60], [1, 8 * 60, 20 * 60], [2, 8 * 60, 20 * 60], [3, 8 * 60, 20 * 60], [4, 8 * 60, 20 * 60], [5, 8 * 60, 20 * 60], [6, 8 * 60, 20 * 60]],
+    });
+    const student = makeStudent();
+    const slot = firstSlot(tutor.id);
+
+    const booking = acceptBooking(
+      createBooking({
+        studentId: student.id,
+        tutorId: tutor.id,
+        subjectId: subject.id,
+        startsAt: slot.startsAt,
+      }).id,
+      tutor
+    );
+    assert.equal(booking.status, 'confirmed');
+
+    // The tutor now removes every block, i.e. withdraws all availability.
+    for (const block of listBlocks(tutor.id)) removeBlock(tutor.id, block.id);
+
+    const stillThere = getBookingForUser(booking.id, student);
+    assert.ok(stillThere, 'the student can still see the session');
+    assert.equal(stillThere.status, 'confirmed', 'an agreed session is not silently dropped');
+    assert.equal(stillThere.starts_at, slot.startsAt, 'its time is unchanged');
+    assert.deepEqual(generateSlots(tutor.id), [], 'no new slots are offered');
+  });
+
+  test('marking time off is refused while a session on that date is live', () => {
+    const { user: tutor, subject } = makeTutor();
+    const student = makeStudent();
+    const slot = firstSlot(tutor.id);
+    createBooking({
+      studentId: student.id,
+      tutorId: tutor.id,
+      subjectId: subject.id,
+      startsAt: slot.startsAt,
+    });
+
+    assert.throws(
+      () => addTimeOff(tutor.id, { date: slot.dateKey, note: 'Away' }),
+      (error) => error instanceof DomainError && /still have a session booked/.test(error.message)
+    );
+  });
+
+  test('after the session is cancelled, the tutor can mark that date off', () => {
+    const { user: tutor, subject } = makeTutor();
+    const student = makeStudent();
+    const slot = firstSlot(tutor.id);
+    const booking = createBooking({
+      studentId: student.id,
+      tutorId: tutor.id,
+      subjectId: subject.id,
+      startsAt: slot.startsAt,
+    });
+
+    cancelBooking(booking.id, tutor, 'Timetable clash, sorry.');
+    assert.ok(addTimeOff(tutor.id, { date: slot.dateKey, note: 'Away' }));
+    assert.equal(
+      generateSlots(tutor.id).some((candidate) => candidate.dateKey === slot.dateKey),
+      false,
+      'the whole day is withdrawn'
+    );
   });
 });

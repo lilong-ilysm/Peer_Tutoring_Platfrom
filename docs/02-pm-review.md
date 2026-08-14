@@ -181,3 +181,53 @@ Final state of the evidence I care about as PM:
 **Final decision: APPROVED.** Two things go into the final report as open items rather than being
 quietly dropped: AC-42 needs a human with a browser, and AC-43's "loading affordance" is limited to
 the submit-once state on mutations, which I accept for a server-rendered application.
+
+---
+
+## Round 4 — post-development audit
+
+An external audit raised eight areas plus two UX complaints. I verified each against the code rather
+than accepting or dismissing it. Evidence came from a direct database/service probe
+(`tmp/audit.mjs`), the running server, and the test suite.
+
+### Findings verified
+
+| Audit item | Verdict | Evidence |
+|---|---|---|
+| §3 Tutor descriptions inconsistent between pages | **CONFIRMED BUG — HIGH** | `featuredTutors()` selected 7 columns and omitted `tp.bio`, while `searchTutors()` selected it. Three seeded tutors with 41, 134 and 123 characters of bio rendered "No description added yet." on the home page only. **Root cause: two SQL projections feeding one component.** |
+| §2 Statistics accuracy | **CONFIRMED BUG — MEDIUM** | "Subjects covered" printed the catalogue count (15) while 13 subjects had a bookable tutor and 12 chips were rendered. Tutors (6) and completed sessions (7) were already correct and DB-derived — nothing was hardcoded, contrary to the report's worry. |
+| §7 Pricing clarity | **CONFIRMED GAP — MEDIUM** | The no-payments policy appeared in three places, but nothing beside a rate explained what the rate *was*. |
+| §4 "Real availability" claim | **SUPPORTED** | 4 stored blocks expanded to 29 slots, all future, none colliding with the tutor's live booking. No hardcoded slots exist. |
+| §6 Login lockout claim | **IMPLEMENTED, wording imprecise** | Blocked on attempt 11 with a 600-second window, enforced server-side. The page said "pauses briefly"; it now states the real rule. Per-IP only, not per-account — documented as a limitation. |
+| §1 Search → Compare → Request → Meet | **SUPPORTED** | Every step exercised end to end. |
+| §5 Booking conflicts A–D | **A, B, C already covered; D was untested** | A/B/C had tests and probes (including genuine concurrency). Scenario D (tutor changes availability after a booking) had no test — now three. |
+| §8/§9 Authenticated flows and test accounts | **SUPPORTED** | All roles tested with seeded accounts; no personal credentials used or requested. |
+
+### Fixes accepted
+
+| ID | Fix | Regression cover |
+|---|---|---|
+| AUD-1 | One shared `CARD_COLUMNS` projection behind every tutor card | `search.test.js`: field parity between featured and search results; renders a real card and asserts the placeholder is absent; keeps the placeholder for a genuinely empty bio |
+| AUD-2 | Derived `subjectsCovered` statistic + "Showing 12 of 13" label | `admin.test.js`: matches subjects-with-tutors, drops when a subject is retired or its only tutor unpublishes |
+| AUD-3 | `paymentNote()` shown on the home page, search results, tutor profile and booking form | `views.test.js` + HTTP probe on all four surfaces |
+| AUD-4 | Login page states the real limit (10 attempts / 10 minutes, server-side) | HTTP probe asserts the new wording and the absence of the vague claim |
+| AUD-5 | Scenario D behaviour pinned down: an agreed session survives an availability change; the slot stops being offered; time off is refused while a session is live; allowed once cancelled | `bookings.test.js`, 3 new tests |
+| AUD-6 | Landing page rebuilt around a working search (see [`05-design-review.md`](05-design-review.md)) | `views.test.js` design constraints + 20-check HTTP probe |
+| AUD-7 | Mobile redesign: bottom nav, collapsible filters, two-up stats, larger targets, wrap rules, asset version bump (see [`06-mobile-qa-report.md`](06-mobile-qa-report.md)) | `views.test.js` navigation tests + probe across 11 pages |
+
+### Evidence after the round
+
+- Automated suite: **249 checks, 48 suites, 0 failures** (was 228).
+- Audit/mobile probe: **69 checks, 0 failures**.
+- Adversarial probe: **57 checks, 0 failures**.
+- Scripted walkthrough: **67 assertions, 0 failures**.
+
+### Decision
+
+**APPROVED**, with two open items carried forward unchanged and stated in the final report:
+
+1. **AC-42 / visual verification remains NOT VERIFIED** — no browser exists here. Everything visual
+   was verified as markup and CSS only.
+2. **AWS Amplify is not compatible with this architecture** (see
+   [`07-aws-deployment.md`](07-aws-deployment.md)). That is an architectural decision for the product
+   owner, not a defect I can quietly fix, and no AWS deployment has been performed.

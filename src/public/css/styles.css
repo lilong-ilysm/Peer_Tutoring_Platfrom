@@ -1164,52 +1164,107 @@ code {
 }
 
 /* ------------------------------------------------------------ landing --- */
-.hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: var(--space-6);
-  align-items: center;
-  padding: var(--space-6) 0 var(--space-7);
+/* The home page leads with a task, not a billboard: one heading, one sentence,
+   then a working search. No oversized hero, no repeated calls to action. */
+.intro {
+  padding: var(--space-5) 0 var(--space-4);
+  border-bottom: 1px solid var(--ink-200);
+  margin-bottom: var(--space-5);
 }
 
-.hero__eyebrow {
-  display: inline-block;
-  padding: 4px var(--space-3);
-  border-radius: var(--radius-pill);
-  background: var(--brand-100);
-  color: var(--brand-700);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-bottom: var(--space-3);
+.intro__title {
+  font-size: var(--text-2xl);
+  line-height: 1.2;
+  margin-bottom: var(--space-2);
+  max-width: 34ch;
 }
 
-.hero__title {
-  font-size: var(--text-3xl);
-  line-height: 1.15;
-  margin-bottom: var(--space-3);
-}
-
-.hero__lead {
-  font-size: var(--text-lg);
+.intro__lead {
   color: var(--ink-600);
-  max-width: 52ch;
+  max-width: 68ch;
+  margin-bottom: var(--space-4);
 }
 
-.hero__actions {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-  margin-top: var(--space-5);
-}
-
-.hero__panel {
+.home-search {
   background: var(--white);
   border: 1px solid var(--ink-200);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-5);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.home-search__row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+}
+
+.home-search .field {
+  margin-bottom: 0;
+}
+
+.home-search__submit .btn {
+  width: 100%;
+}
+
+/* Platform numbers as one readable line instead of three decorative tiles. */
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+}
+
+.facts strong {
+  color: var(--ink-900);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-600);
+  background: var(--ink-050);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  max-width: 80ch;
+}
+
+.note--compact {
+  font-size: var(--text-xs);
+  background: none;
+  border: 0;
+  padding: 0;
+  margin-bottom: var(--space-3);
+}
+
+.chip-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--ink-200);
+  background: var(--white);
+  color: var(--ink-800);
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.chip-link:hover {
+  border-color: var(--brand-500);
+  color: var(--brand-700);
+  text-decoration: none;
+}
+
+.chip-link__count {
+  font-size: var(--text-xs);
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
 }
 
 .steps {
@@ -1884,13 +1939,16 @@ code {
 /* -------------------------------------------------------- responsive --- */
 @media (max-width: 960px) {
   .split,
-  .search-layout,
-  .hero {
+  .search-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .filters {
     position: static;
+  }
+
+  .home-search__row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -2008,5 +2066,313 @@ code {
     transition: none !important;
     animation: none !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* ===========================================================================
+   Mobile layer
+   ---------------------------------------------------------------------------
+   Written as a deliberate small-screen design rather than a shrunken desktop:
+   a fixed bottom navigation bar, filters that collapse behind a disclosure,
+   two-up statistics, and touch targets at 44px minimum.
+   Breakpoints: 900px (filters/layout), 720px (navigation + density), 420px
+   (typography trim). Nothing else.
+   =========================================================================== */
+
+/* ------------------------------------------- collapsible filter panel ---- */
+.filters-panel {
+  min-width: 0;
+}
+
+.filters-panel__toggle {
+  display: none;
+}
+
+.filters-panel > .filters {
+  margin-top: 0;
+}
+
+@media (max-width: 900px) {
+  .filters-panel {
+    background: var(--white);
+    border: 1px solid var(--ink-200);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-4);
+  }
+
+  /* A real, tappable summary row. Closed by default on small screens via a
+     progressive-enhancement script; without JS it simply stays expanded. */
+  .filters-panel__toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 48px;
+    padding: var(--space-3) var(--space-4);
+    cursor: pointer;
+    font-weight: 650;
+    font-size: var(--text-sm);
+    color: var(--ink-800);
+    list-style: none;
+  }
+
+  .filters-panel__toggle::-webkit-details-marker {
+    display: none;
+  }
+
+  .filters-panel__toggle::after {
+    content: '▾';
+    margin-left: auto;
+    color: var(--ink-500);
+  }
+
+  .filters-panel[open] .filters-panel__toggle::after {
+    content: '▴';
+  }
+
+  .filters-panel > .filters {
+    border: 0;
+    border-top: 1px solid var(--ink-100);
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
+
+/* --------------------------------------------------- bottom navigation --- */
+.bottom-nav {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  /* The header keeps identity and account actions; primary destinations move
+     to a thumb-reachable bar so nothing wraps or overflows. */
+  .site-nav {
+    display: none;
+  }
+
+  .site-header__inner {
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .bottom-nav {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 50;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    background: var(--white);
+    border-top: 1px solid var(--ink-200);
+    box-shadow: 0 -2px 8px rgba(16, 19, 28, 0.06);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .bottom-nav__link {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: var(--space-1) 2px;
+    color: var(--ink-600);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .bottom-nav__link:hover,
+  .bottom-nav__link:focus-visible {
+    text-decoration: none;
+    background: var(--ink-050);
+  }
+
+  .bottom-nav__link--active {
+    color: var(--brand-700);
+    background: var(--brand-050);
+  }
+
+  .bottom-nav__icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .bottom-nav__label {
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  .bottom-nav__badge {
+    position: absolute;
+    top: 4px;
+    right: 50%;
+    transform: translateX(18px);
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: var(--radius-pill);
+    background: var(--danger-700);
+    color: var(--white);
+    font-size: 10px;
+    line-height: 16px;
+  }
+
+  /* Clear the fixed bar so the last element of every page stays reachable. */
+  .main {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .site-footer__inner {
+    padding-bottom: var(--space-6);
+  }
+}
+
+/* ------------------------------------------------- density and targets --- */
+@media (max-width: 720px) {
+  /* Statistics read better two-up than as a single tall column. */
+  .grid--4,
+  .grid--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .stat {
+    padding: var(--space-3);
+  }
+
+  .stat__value {
+    font-size: var(--text-xl);
+  }
+
+  .intro {
+    padding-top: var(--space-3);
+  }
+
+  .intro__title {
+    font-size: 1.5rem;
+  }
+
+  .home-search {
+    padding: var(--space-3);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-4);
+  }
+
+  .page-header__actions .btn,
+  .form__actions .btn {
+    flex: 1 1 auto;
+  }
+
+  /* Bookable times as a tap-friendly grid rather than a wrapped chip row. */
+  .slot-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+    gap: var(--space-2);
+  }
+
+  .slot {
+    min-height: 48px;
+    width: 100%;
+  }
+
+  .tab,
+  .pagination__page,
+  .pagination__step {
+    min-height: 44px;
+  }
+
+  .block-chip {
+    min-height: 44px;
+  }
+
+  .block-chip__remove {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .tutor-card {
+    padding: var(--space-3);
+    gap: var(--space-2);
+  }
+
+  .tutor-card__meta {
+    padding-top: var(--space-2);
+  }
+
+  .conversation,
+  .notification,
+  .list__item {
+    padding: var(--space-3);
+  }
+
+  .definition {
+    font-size: var(--text-sm);
+  }
+
+  .table--stack td {
+    grid-template-columns: 45% 1fr;
+  }
+
+  .thread {
+    max-height: 50vh;
+    padding: var(--space-3);
+  }
+
+  .composer {
+    gap: var(--space-2);
+  }
+
+  .composer .btn {
+    min-width: 84px;
+  }
+}
+
+/* Nothing may push the viewport sideways: long words and codes wrap instead. */
+@media (max-width: 720px) {
+  .card,
+  .session,
+  .tutor-card,
+  .bubble,
+  .conversation__body,
+  .notification__body {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 420px) {
+  .intro__title {
+    font-size: 1.375rem;
+  }
+
+  .facts {
+    gap: var(--space-1) var(--space-3);
+    font-size: var(--text-xs);
+  }
+
+  .grid--4,
+  .grid--3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .btn-row .btn,
+  .session__actions .btn {
+    width: auto;
+    flex: 1 1 auto;
+  }
+
+  .bottom-nav__label {
+    font-size: 10px;
   }
 }

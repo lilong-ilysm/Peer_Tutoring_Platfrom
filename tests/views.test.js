@@ -18,6 +18,7 @@ import {
 } from '../src/web/views/components.js';
 import { layout } from '../src/web/views/layout.js';
 import { errorPage } from '../src/web/views/pages/error.js';
+import { landingPage } from '../src/web/views/pages/landing.js';
 
 const render = (fragment) => fragment.value ?? String(fragment);
 
@@ -265,5 +266,117 @@ describe('page shell', () => {
     });
     assert.ok(!html.includes('<img src=x'));
     assert.match(html, /&lt;img src=x/);
+  });
+});
+
+describe('landing page is a tool, not a brochure (design review)', () => {
+  const sample = {
+    stats: { tutors: 6, subjectsCovered: 13, completedSessions: 7 },
+    featured: [
+      {
+        id: 2,
+        full_name: 'Naledi Mokoena',
+        headline: 'Third-year maths student',
+        bio: 'I work through past papers and stop at the step that breaks.',
+        mode: 'both',
+        hourly_rate_cents: 12000,
+        rating_avg: 5,
+        rating_count: 2,
+        subjects: [{ subject_id: 1, name: 'Calculus I', code: 'MAT101', level: 'advanced' }],
+      },
+    ],
+    subjects: [
+      { id: 1, name: 'Calculus I', tutor_count: 2 },
+      { id: 2, name: 'Linear Algebra', tutor_count: 1 },
+      { id: 3, name: 'Latin', tutor_count: 0 },
+    ],
+  };
+
+  const html = render(landingPage(sample));
+
+  test('the first interactive element is a working search that submits to /tutors', () => {
+    assert.match(html, /<form class="home-search" method="get" action="\/tutors" role="search">/);
+    assert.match(html, /name="q"/);
+    assert.match(html, /name="subject"/);
+    assert.match(html, /Search tutors/);
+  });
+
+  test('platform numbers come from the passed data, never hardcoded', () => {
+    assert.match(html, /<strong>6<\/strong> tutors taking bookings/);
+    assert.match(html, /<strong>13<\/strong> subjects with a tutor/);
+    assert.match(html, /<strong>7<\/strong> sessions completed/);
+  });
+
+  test('only subjects that actually have a tutor are offered', () => {
+    assert.match(html, /Calculus I/);
+    assert.ok(!html.includes('Latin'), 'a subject with no tutor is not advertised');
+  });
+
+  test('tutor descriptions are rendered, not replaced by a placeholder', () => {
+    assert.match(html, /stop at the step that breaks/);
+    assert.ok(!html.includes('No description added yet'));
+  });
+
+  test('what a displayed rate means is stated on the page', () => {
+    assert.match(html, /does not process payments/);
+    assert.match(html, /arrange any payment directly/);
+  });
+
+  test('the marketing surface is restrained: one h1, no repeated CTA block', () => {
+    assert.equal((html.match(/<h1/g) || []).length, 1);
+    assert.ok(!html.includes('Ready to start?'));
+    assert.ok(!html.includes('hero__eyebrow'));
+    // "Find a tutor"/"Get started" style buttons should not be repeated.
+    assert.ok((html.match(/class="btn btn--primary"/g) || []).length <= 1);
+  });
+});
+
+describe('mobile navigation', () => {
+  function shellFor(user) {
+    return render(layout({ title: 'T', body: '<p>x</p>', user, csrfToken: 't' }));
+  }
+
+  test('a bottom bar is rendered with at most four labelled targets', () => {
+    const html = shellFor({ id: 1, full_name: 'Sam Student', role: 'student', email: 's@t.local' });
+    assert.match(html, /<nav class="bottom-nav" aria-label="Primary">/);
+    const links = html.match(/class="bottom-nav__link[^"]*"/g) || [];
+    assert.ok(links.length > 0 && links.length <= 4, `expected 1-4 targets, got ${links.length}`);
+    assert.match(html, /bottom-nav__label">Dashboard/);
+    assert.match(html, /bottom-nav__label">Messages/);
+  });
+
+  test('guests get sign-in targets rather than a dead bar', () => {
+    const html = shellFor(null);
+    assert.match(html, /bottom-nav__label">Log in/);
+    assert.match(html, /bottom-nav__label">Sign up/);
+  });
+
+  test('the admin bar drops the fifth item instead of overflowing', () => {
+    const html = shellFor({ id: 3, full_name: 'Ada Admin', role: 'admin', email: 'a@t.local' });
+    const links = html.match(/class="bottom-nav__link[^"]*"/g) || [];
+    assert.equal(links.length, 4);
+    assert.ok(!/bottom-nav__label">Audit log/.test(html), 'audit log stays in the header nav');
+    assert.match(html, /href="\/admin\/audit"/, 'but is still reachable');
+  });
+
+  test('both navigations are generated from one list, so they cannot drift', () => {
+    const html = shellFor({ id: 2, full_name: 'Tara Tutor', role: 'tutor', email: 't@t.local' });
+    for (const href of ['/dashboard', '/bookings', '/profile/availability', '/messages']) {
+      const occurrences = (html.match(new RegExp(`href="${href.replace(/\//g, '\\/')}"`, 'g')) || []).length;
+      assert.ok(occurrences >= 2, `${href} should appear in the header and the bottom bar`);
+    }
+  });
+
+  test('the current page is marked in both navigations', () => {
+    const html = render(
+      layout({
+        title: 'T',
+        body: '<p>x</p>',
+        user: { id: 1, full_name: 'Sam Student', role: 'student', email: 's@t.local' },
+        activeNav: 'bookings',
+        csrfToken: 't',
+      })
+    );
+    assert.ok((html.match(/aria-current="page"/g) || []).length >= 2);
   });
 });

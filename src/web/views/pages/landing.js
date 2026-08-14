@@ -1,115 +1,86 @@
 /**
- * Landing page: explain the product, prove there is supply, drive sign-up.
+ * Landing page.
+ *
+ * Design rule applied here (see docs/05-design-review.md): the home page is the
+ * front door of a tool, not a brochure. The first interactive element is a real
+ * search that submits to /tutors, the numbers are one line of plain text rather
+ * than three decorative tiles, and there is exactly one marketing sentence.
+ * Everything below it is live data a visitor can act on.
  */
 import config from '../../../config.js';
 import { timezoneLabel } from '../../../lib/time.js';
-import { badge, emptyState, statTile } from '../components.js';
-import { html, join, raw } from '../html.js';
+import { emptyState, paymentNote, selectField, submitButton, textField } from '../components.js';
+import { html, raw } from '../html.js';
 import { tutorCard } from './tutors.js';
 
-const STUDENT_STEPS = [
-  ['Search', 'Filter tutors by subject, level, price and the days you are actually free.'],
-  ['Compare', 'Read peer reviews and see exactly what each tutor teaches.'],
-  ['Request', 'Pick an open slot from their calendar and say what you need help with.'],
-  ['Meet', 'The tutor confirms, you attend, then you leave a review.'],
+const STEPS = [
+  ['Search', 'Filter by subject, level, price and the days you are free.'],
+  ['Compare', 'Ratings and reviews come from completed sessions only.'],
+  ['Request', 'Pick a real open slot; the tutor confirms it.'],
+  ['Meet', 'Attend, then review the session.'],
 ];
 
-const TUTOR_STEPS = [
-  ['Create a profile', 'Say what you teach, at what level, and how you meet students.'],
-  ['Set your hours', 'Add weekly availability blocks. You are never bookable outside them.'],
-  ['Approve requests', 'Accept the sessions that suit you, decline the ones that do not.'],
-  ['Build a record', 'Completed sessions and reviews build a reputation you can point to.'],
-];
+const SUBJECT_CHIP_LIMIT = 12;
 
 export function landingPage({ stats, featured, subjects }) {
-  const topSubjects = subjects.filter((subject) => subject.tutor_count > 0).slice(0, 12);
+  const covered = subjects.filter((subject) => subject.tutor_count > 0);
+  const shown = covered.slice(0, SUBJECT_CHIP_LIMIT);
 
   return html`
-    <section class="hero">
-      <div>
-        <span class="hero__eyebrow">Campus peer tutoring</span>
-        <h1 class="hero__title">Get unstuck with a student who has already passed it</h1>
-        <p class="hero__lead">
-          ${config.appName} connects students who need help with peers who can give it. Search by
-          subject, see real availability, and book a session in a couple of clicks - no group-chat
-          negotiation required.
-        </p>
-        <div class="hero__actions">
-          <a class="btn btn--primary" href="/tutors">Find a tutor</a>
-          <a class="btn btn--secondary" href="/register?role=tutor">Become a tutor</a>
-        </div>
-        <p class="text-sm muted">
-          Free to use. No payments are processed here. All times shown in ${timezoneLabel()}.
-        </p>
-      </div>
+    <section class="intro">
+      <h1 class="intro__title">Find a peer tutor for the subject you are stuck on</h1>
+      <p class="intro__lead">
+        ${config.appName} connects students who need help with students who have already passed the
+        subject. Search, pick a time that is genuinely free, and the tutor confirms it.
+      </p>
 
-      <div class="hero__panel">
-        <h2 class="card__title">On the platform right now</h2>
-        <div class="grid grid--3">
-          ${statTile({ label: 'Tutors taking bookings', value: stats.tutors, tone: 'info' })}
-          ${statTile({ label: 'Subjects covered', value: stats.subjects })}
-          ${statTile({ label: 'Sessions completed', value: stats.completedSessions, tone: 'success' })}
+      <form class="home-search" method="get" action="/tutors" role="search">
+        <h2 class="sr-only">Search for a tutor</h2>
+        <div class="home-search__row">
+          ${textField({
+            name: 'q',
+            label: 'What do you need help with?',
+            placeholder: 'e.g. calculus, programming, essay structure',
+            maxlength: 80,
+          })}
+          ${selectField({
+            name: 'subject',
+            label: 'Subject',
+            placeholder: 'Any subject',
+            options: covered.map((subject) => ({
+              value: subject.id,
+              label: `${subject.name} (${subject.tutor_count})`,
+            })),
+          })}
+          <div class="home-search__submit">${submitButton('Search tutors')}</div>
         </div>
-        <p class="text-sm muted">
-          Every tutor listed has a published profile, at least one subject and real availability.
-        </p>
-      </div>
+      </form>
+
+      <p class="facts">
+        <span><strong>${stats.tutors}</strong> tutors taking bookings</span>
+        <span><strong>${stats.subjectsCovered}</strong> subjects with a tutor</span>
+        <span><strong>${stats.completedSessions}</strong> sessions completed</span>
+        <span>Times shown in ${timezoneLabel()}</span>
+      </p>
+      ${paymentNote()}
     </section>
 
-    <section class="section" id="how-it-works">
-      <div class="section__head">
-        <h2 class="section__title">How it works</h2>
-      </div>
-      <div class="split">
-        <div class="card">
-          <h3>If you need help</h3>
-          <div class="steps">
-            ${join(
-              STUDENT_STEPS.map(
-                ([title, text], index) => html`
-                  <div class="step">
-                    <span class="step__number">${index + 1}</span>
-                    <h4 class="step__title">${title}</h4>
-                    <p class="step__text">${text}</p>
-                  </div>
-                `
-              )
-            )}
-          </div>
-          <p class="text-sm muted">
-            You always see the status of a request: pending, confirmed, declined or cancelled.
-          </p>
-        </div>
-        <div class="card">
-          <h3>If you can help</h3>
-          <div class="steps">
-            ${join(
-              TUTOR_STEPS.map(
-                ([title, text], index) => html`
-                  <div class="step">
-                    <span class="step__number">${index + 1}</span>
-                    <h4 class="step__title">${title}</h4>
-                    <p class="step__text">${text}</p>
-                  </div>
-                `
-              )
-            )}
-          </div>
-          <p class="text-sm muted">You control your hours, and you approve every booking.</p>
-        </div>
-      </div>
-    </section>
-
-    ${topSubjects.length
+    ${covered.length
       ? html`<section class="section">
           <div class="section__head">
-            <h2 class="section__title">Subjects with tutors available</h2>
-            <a class="section__link" href="/tutors">See all tutors</a>
+            <h2 class="section__title">Subjects with a tutor available</h2>
+            ${covered.length > shown.length
+              ? html`<span class="text-sm muted"
+                  >Showing ${shown.length} of ${covered.length} —
+                  <a href="/tutors">see all tutors</a></span
+                >`
+              : html`<a class="section__link" href="/tutors">See all tutors</a>`}
           </div>
           <div class="chips">
-            ${topSubjects.map(
-              (subject) => html`<a class="badge badge--brand" href="/tutors?subject=${subject.id}"
-                >${subject.name} · ${subject.tutor_count}</a
+            ${shown.map(
+              (subject) => html`<a class="chip-link" href="/tutors?subject=${subject.id}"
+                >${subject.name}
+                <span class="chip-link__count">${subject.tutor_count}</span></a
               >`
             )}
           </div>
@@ -118,38 +89,40 @@ export function landingPage({ stats, featured, subjects }) {
 
     <section class="section">
       <div class="section__head">
-        <h2 class="section__title">Tutors students come back to</h2>
-        <a class="section__link" href="/tutors">Browse all</a>
+        <h2 class="section__title">Tutors available now</h2>
+        <a class="section__link" href="/tutors">Browse all tutors</a>
       </div>
       ${featured.length === 0
-        ? emptyState({
-            icon: 'users',
-            title: 'No published tutors yet',
-            message:
-              'Be the first: create a tutor profile, add a subject and your weekly hours, and students will find you.',
-            actionLabel: 'Become a tutor',
-            actionHref: '/register?role=tutor',
-          })
+        ? html`<div class="card">
+            ${emptyState({
+              icon: 'users',
+              title: 'No published tutors yet',
+              message:
+                'A tutor appears here once they have a headline, at least one subject and weekly availability.',
+              actionLabel: 'Become a tutor',
+              actionHref: '/register?role=tutor',
+            })}
+          </div>`
         : html`<div class="tutor-grid">${featured.map(tutorCard)}</div>`}
     </section>
 
-    <section class="card">
-      <div class="page-header">
-        <div class="page-header__text">
-          <h2>Ready to start?</h2>
-          <p class="muted">
-            Create an account in under a minute. Students book sessions; tutors publish availability.
-          </p>
-        </div>
-        <div class="page-header__actions">
-          <a class="btn btn--primary" href="/register">Create an account</a>
-          <a class="btn btn--ghost" href="/login">I already have one</a>
-        </div>
+    <section class="section" id="how-it-works">
+      <div class="section__head">
+        <h2 class="section__title">How booking works</h2>
       </div>
-      <div class="chips">
-        ${badge('No payments on platform', 'neutral')} ${badge('Peer reviewed', 'neutral')}
-        ${badge('You control your data', 'neutral')}
-      </div>
+      <ol class="steps steps--compact">
+        ${STEPS.map(
+          ([title, text], index) => html`<li class="step">
+            <span class="step__number">${index + 1}</span>
+            <h3 class="step__title">${title}</h3>
+            <p class="step__text">${text}</p>
+          </li>`
+        )}
+      </ol>
+      <p class="text-sm muted">
+        Tutoring instead? <a href="/register?role=tutor">Create a tutor profile</a> — you set weekly
+        hours, approve every request, and only appear in search once your profile is complete.
+      </p>
     </section>
   `;
 }

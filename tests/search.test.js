@@ -13,7 +13,8 @@ import {
   setPublished,
 } from '../src/services/tutors.js';
 import { setUserStatus } from '../src/services/users.js';
-import { tutorSearchPage } from '../src/web/views/pages/tutors.js';
+import { featuredTutors } from '../src/services/tutors.js';
+import { tutorCard, tutorSearchPage } from '../src/web/views/pages/tutors.js';
 import { useTempDatabase } from './helpers/database.js';
 import { makeStudent, makeTutor } from './helpers/factory.js';
 
@@ -274,5 +275,56 @@ describe('search page rendering', () => {
 
     assert.ok(!html.includes('<img src=x'));
     assert.match(html, /&lt;img src=x/);
+  });
+});
+
+describe('one projection behind every tutor card (audit finding 3)', () => {
+  test('featured tutors carry the same fields as search results', () => {
+    const featured = featuredTutors(3);
+    const searched = searchTutors({ pageSize: 3 }).rows;
+    assert.ok(featured.length > 0);
+
+    const required = [
+      'id',
+      'full_name',
+      'headline',
+      'bio',
+      'mode',
+      'campus',
+      'hourly_rate_cents',
+      'years_experience',
+      'rating_avg',
+      'rating_count',
+      'subjects',
+    ];
+    for (const field of required) {
+      assert.ok(Object.hasOwn(featured[0], field), `featured tutors must include "${field}"`);
+      assert.ok(Object.hasOwn(searched[0], field), `search results must include "${field}"`);
+    }
+  });
+
+  test('a tutor with a stored description never renders as having none', () => {
+    const withBio = featuredTutors(6).filter((tutor) => tutor.bio);
+    assert.ok(withBio.length > 0, 'fixtures include tutors with a description');
+    for (const tutor of withBio) {
+      const card = tutorCard(tutor).value;
+      assert.ok(!card.includes('No description added yet'), `${tutor.full_name} lost its description`);
+      assert.ok(card.includes(tutor.bio.slice(0, 20)), `${tutor.full_name} bio not rendered`);
+    }
+  });
+
+  test('the placeholder still appears when there genuinely is no description', () => {
+    const card = tutorCard({
+      id: 999,
+      full_name: 'No Bio Tutor',
+      headline: 'Headline only',
+      bio: '',
+      mode: 'online',
+      hourly_rate_cents: 0,
+      rating_avg: 0,
+      rating_count: 0,
+      subjects: [],
+    }).value;
+    assert.match(card, /No description added yet/);
   });
 });

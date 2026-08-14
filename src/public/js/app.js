@@ -136,6 +136,30 @@
     window.setInterval(run, 60000);
   }
 
+  /* --------------------------------------------------- filter disclosure -- */
+  // The filter panel is rendered open so it works with scripting disabled.
+  // On small screens we collapse it so results are the first thing seen, and
+  // reopen it automatically if the viewport grows.
+  function attachFilterPanel() {
+    var panel = document.querySelector('[data-filter-panel]');
+    if (!panel) return;
+    var small = window.matchMedia('(max-width: 900px)');
+    var touchedByUser = false;
+
+    panel.addEventListener('toggle', function () {
+      touchedByUser = true;
+    });
+
+    var apply = function () {
+      if (touchedByUser) return;
+      if (small.matches) panel.removeAttribute('open');
+      else panel.setAttribute('open', '');
+    };
+
+    apply();
+    if (small.addEventListener) small.addEventListener('change', apply);
+  }
+
   /* -------------------------------------------------------- filter form -- */
   // Submitting on change keeps filter state in the URL (shareable, back-safe).
   function attachAutoSubmit() {
@@ -224,6 +248,7 @@
     refreshRelativeTimes();
     window.setInterval(refreshRelativeTimes, 60000);
     pollNotificationBadge();
+    attachFilterPanel();
     attachAutoSubmit();
     initThread();
     closeMenusOnOutsideClick();

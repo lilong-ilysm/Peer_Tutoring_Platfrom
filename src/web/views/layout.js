@@ -11,38 +11,77 @@ import { timezoneLabel } from '../../lib/time.js';
 import { alert, avatar, icons } from './components.js';
 import { attrs, classNames, html, raw, safeUrl } from './html.js';
 
-const ASSET_VERSION = '1';
+// Bump when CSS or the client script changes, so cached assets are replaced.
+const ASSET_VERSION = '2';
 
+/**
+ * Primary destinations per role.
+ *
+ * `icon` is used by the mobile bottom bar; `mobile: false` keeps an item out of
+ * it so the bar never holds more than four targets. Both navigations are driven
+ * from this one list, so they can never drift apart.
+ */
 function navItems(user) {
   if (!user) {
     return [
-      { href: '/tutors', label: 'Find tutors', key: 'tutors' },
-      { href: '/#how-it-works', label: 'How it works', key: 'how' },
+      { href: '/', label: 'Home', key: 'home', icon: 'home' },
+      { href: '/tutors', label: 'Find tutors', key: 'tutors', icon: 'search' },
+      { href: '/login', label: 'Log in', key: 'login', icon: 'user' },
+      { href: '/register', label: 'Sign up', key: 'register', icon: 'check' },
     ];
   }
   if (user.role === 'admin') {
     return [
-      { href: '/admin', label: 'Overview', key: 'admin' },
-      { href: '/admin/users', label: 'Users', key: 'admin-users' },
-      { href: '/admin/subjects', label: 'Subjects', key: 'admin-subjects' },
-      { href: '/admin/reviews', label: 'Reviews', key: 'admin-reviews' },
-      { href: '/admin/audit', label: 'Audit log', key: 'admin-audit' },
+      { href: '/admin', label: 'Overview', key: 'admin', icon: 'home' },
+      { href: '/admin/users', label: 'Users', key: 'admin-users', icon: 'users' },
+      { href: '/admin/subjects', label: 'Subjects', key: 'admin-subjects', icon: 'inbox' },
+      { href: '/admin/reviews', label: 'Reviews', key: 'admin-reviews', icon: 'star' },
+      { href: '/admin/audit', label: 'Audit log', key: 'admin-audit', icon: 'clock', mobile: false },
     ];
   }
   if (user.role === 'tutor') {
     return [
-      { href: '/dashboard', label: 'Dashboard', key: 'dashboard' },
-      { href: '/bookings', label: 'Sessions', key: 'bookings' },
-      { href: '/profile/availability', label: 'Availability', key: 'availability' },
-      { href: '/messages', label: 'Messages', key: 'messages' },
+      { href: '/dashboard', label: 'Dashboard', key: 'dashboard', icon: 'home' },
+      { href: '/bookings', label: 'Sessions', key: 'bookings', icon: 'calendar' },
+      { href: '/profile/availability', label: 'Availability', key: 'availability', icon: 'clock' },
+      { href: '/messages', label: 'Messages', key: 'messages', icon: 'chat' },
     ];
   }
   return [
-    { href: '/dashboard', label: 'Dashboard', key: 'dashboard' },
-    { href: '/tutors', label: 'Find tutors', key: 'tutors' },
-    { href: '/bookings', label: 'Sessions', key: 'bookings' },
-    { href: '/messages', label: 'Messages', key: 'messages' },
+    { href: '/dashboard', label: 'Dashboard', key: 'dashboard', icon: 'home' },
+    { href: '/tutors', label: 'Find tutors', key: 'tutors', icon: 'search' },
+    { href: '/bookings', label: 'Sessions', key: 'bookings', icon: 'calendar' },
+    { href: '/messages', label: 'Messages', key: 'messages', icon: 'chat' },
   ];
+}
+
+/**
+ * Mobile navigation: a fixed bottom bar with icon + label targets.
+ *
+ * Deliberately not a shrunken desktop row and not a JavaScript drawer - it is
+ * always visible, thumb-reachable, needs no script, and cannot overflow because
+ * it holds at most four items.
+ */
+function bottomNav(items, activeNav, unreadMessages) {
+  const targets = items.filter((item) => item.mobile !== false).slice(0, 4);
+  return html`
+    <nav class="bottom-nav" aria-label="Primary">
+      ${targets.map(
+        (item) => html`<a
+          class="${classNames('bottom-nav__link', activeNav === item.key && 'bottom-nav__link--active')}"
+          href="${safeUrl(item.href, '/')}"
+          ${attrs({ 'aria-current': activeNav === item.key ? 'page' : undefined })}
+        >
+          <span class="bottom-nav__icon" aria-hidden="true">${icons[item.icon] || icons.inbox}</span>
+          <span class="bottom-nav__label">${item.label}</span>
+          ${item.key === 'messages' && unreadMessages > 0
+            ? html`<span class="bottom-nav__badge" aria-hidden="true">${unreadMessages}</span>
+                <span class="sr-only">${unreadMessages} unread</span>`
+            : raw('')}
+        </a>`
+      )}
+    </nav>
+  `;
 }
 
 function accountMenu(user, csrfToken) {
@@ -178,6 +217,8 @@ ${
       <div class="flash-area" aria-live="polite">${alert(flash)}</div>
       ${body}
     </main>
+
+    ${bottomNav(items, activeNav, unreadMessages)}
 
     <footer class="site-footer">
       <div class="site-footer__inner">

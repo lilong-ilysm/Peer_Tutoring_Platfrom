@@ -344,6 +344,20 @@ export function weekdayName(index) {
 
 /* ------------------------------------------------------------ structure -- */
 
+/**
+ * What a displayed rate actually means.
+ *
+ * Rates are advertised by tutors, but no money moves through the platform, so
+ * this appears wherever a rate is shown to stop anyone assuming they will be
+ * charged here (audit finding 7).
+ */
+export function paymentNote({ compact = false } = {}) {
+  const text = `Rates are advertised by tutors for reference only. ${config.appName} does not process payments — students and tutors arrange any payment directly between themselves.`;
+  return compact
+    ? html`<p class="note note--compact">${text}</p>`
+    : html`<p class="note">${text}</p>`;
+}
+
 export function pageHeader({ title, subtitle, actions }) {
   return html`
     <div class="page-header">
@@ -450,5 +464,11 @@ export const icons = {
   ),
   check: raw(
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 13l4 4L19 7"/></svg>'
+  ),
+  home: raw(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 11l8-6.5 8 6.5"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/></svg>'
+  ),
+  user: raw(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>'
   ),
 };

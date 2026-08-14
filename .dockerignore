@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+.env.example
+.env.test
+data
+tmp
+tests
+docs
+node_modules
+README.md
+railway.json
+Dockerfile
+.dockerignore
+*.log

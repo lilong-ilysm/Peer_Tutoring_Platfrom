@@ -19,6 +19,7 @@ import {
   money,
   pageHeader,
   pagination,
+  paymentNote,
   selectField,
   stars,
   statusBadge,
@@ -74,15 +75,16 @@ export function tutorCard(tutor) {
  */
 export function tutorSearchPage({ filters, results, subjects, query }) {
   const buildHref = (page) => `/tutors${queryString({ ...query, page })}`;
-  const hasFilters = Boolean(
-    filters.q ||
-      filters.subjectId ||
-      filters.level ||
-      filters.mode ||
-      filters.minRating ||
-      filters.maxRate ||
-      filters.weekday !== null
-  );
+  const activeFilterCount = [
+    filters.q,
+    filters.subjectId,
+    filters.level,
+    filters.mode,
+    filters.minRating,
+    filters.maxRate,
+    filters.weekday === null ? null : filters.weekday,
+  ].filter((value) => value !== null && value !== undefined && value !== '').length;
+  const hasFilters = activeFilterCount > 0;
 
   return html`
     ${pageHeader({
@@ -91,6 +93,15 @@ export function tutorSearchPage({ filters, results, subjects, query }) {
     })}
 
     <div class="search-layout">
+      <details class="filters-panel" open data-filter-panel>
+        <summary class="filters-panel__toggle">
+          <span class="filters-panel__label">Filters and sorting</span>
+          ${activeFilterCount > 0
+            ? html`<span class="pill" aria-label="${activeFilterCount} filters applied"
+                >${activeFilterCount}</span
+              >`
+            : raw('')}
+        </summary>
       <form class="filters" method="get" action="/tutors" data-autosubmit>
         <h2 class="sr-only">Filter tutors</h2>
 
@@ -185,6 +196,7 @@ export function tutorSearchPage({ filters, results, subjects, query }) {
           ${hasFilters ? html`<a class="btn btn--ghost btn--sm" href="/tutors">Clear all</a>` : raw('')}
         </div>
       </form>
+      </details>
 
       <section aria-label="Search results">
         <div class="results__head">
@@ -195,6 +207,7 @@ export function tutorSearchPage({ filters, results, subjects, query }) {
                   <strong>${results.total}</strong> tutors`}
           </p>
         </div>
+        ${results.total > 0 ? paymentNote({ compact: true }) : raw('')}
 
         ${results.rows.length === 0
           ? emptyState({
@@ -303,7 +316,10 @@ export function tutorProfilePage({
                 : raw('')}
               <dt>Session length</dt>
               <dd>${config.slotMinutes} minutes</dd>
+              <dt>Rate</dt>
+              <dd>${money(tutor.hourly_rate_cents)}</dd>
             </dl>
+            ${paymentNote({ compact: true })}
           </section>
 
           <section class="card" id="availability">
@@ -488,9 +504,8 @@ export function bookingRequestPage({ tutor, slot, subjectOptions, values, errors
           <dt>Status after sending</dt>
           <dd>${statusBadge('pending')}</dd>
         </dl>
-        <p class="text-sm muted">
-          You can cancel a request at any time. No payment is taken on the platform.
-        </p>
+        <p class="text-sm muted">You can cancel a request at any time.</p>
+        ${paymentNote({ compact: true })}
       </aside>
     </div>
   `;

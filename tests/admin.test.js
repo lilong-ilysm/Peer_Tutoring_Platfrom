@@ -16,7 +16,7 @@ import {
   subjectsWithTutorCounts,
   updateSubject,
 } from '../src/services/subjects.js';
-import { getTutorProfile } from '../src/services/tutors.js';
+import { getTutorProfile, setPublished } from '../src/services/tutors.js';
 import { listUsers, setUserStatus } from '../src/services/users.js';
 import { nowIso } from '../src/lib/time.js';
 import { useTempDatabase } from './helpers/database.js';
@@ -231,5 +231,48 @@ describe('statistics and audit trail', () => {
     const entry = listAudit({ limit: 50 }).find((item) => item.action === 'subject.retire');
     assert.ok(entry, 'the log entry remains');
     assert.equal(entry.actor_id, null, 'the actor reference is nulled, not cascaded away');
+  });
+});
+
+describe('statistics match what the pages claim (audit finding 2)', () => {
+  test('subjectsCovered counts subjects a student can actually book', () => {
+    const stats = platformStats();
+    const expected = subjectsWithTutorCounts({ activeOnly: true }).filter(
+      (subject) => subject.tutor_count > 0
+    ).length;
+
+    assert.equal(stats.subjectsCovered, expected);
+    assert.ok(
+      stats.subjects >= stats.subjectsCovered,
+      'the catalogue is never smaller than the covered set'
+    );
+  });
+
+  test('retiring a subject removes it from the covered count', () => {
+    const { subject } = makeTutor({ name: 'Sole Tutor For Subject' });
+    const before = platformStats().subjectsCovered;
+    setSubjectActive(subject.id, false);
+    assert.equal(platformStats().subjectsCovered, before - 1);
+    setSubjectActive(subject.id, true);
+    assert.equal(platformStats().subjectsCovered, before);
+  });
+
+  test('unpublishing the only tutor removes the subject from the covered count', () => {
+    const { user, subject } = makeTutor({ name: 'Only Tutor Here' });
+    const before = platformStats().subjectsCovered;
+    assert.ok(before > 0);
+    setPublished(user.id, false);
+    const after = platformStats().subjectsCovered;
+    assert.equal(after, before - 1, `${subject.name} should no longer count as covered`);
+  });
+
+  test('published tutor count matches the visibility rule used by search', () => {
+    const stats = platformStats();
+    const rows = Number(
+      ctx.database.value(`
+        SELECT COUNT(*) FROM tutor_profiles tp JOIN users u ON u.id = tp.user_id
+         WHERE tp.is_published = 1 AND u.status = 'active'`)
+    );
+    assert.equal(stats.tutorsPublished, rows);
   });
 });

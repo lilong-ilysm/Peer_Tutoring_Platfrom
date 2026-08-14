@@ -154,7 +154,10 @@ export function loginPage({ values = {}, errors = {}, csrfToken, next = '' }) {
         <h2 class="card__title">Trouble signing in?</h2>
         <ul class="stack text-sm">
           <li>Email addresses are not case sensitive.</li>
-          <li>After several failed attempts, sign-in pauses briefly for security.</li>
+          <li>
+            After 10 failed attempts from the same network, sign-in is blocked for 10 minutes. The
+            limit is enforced on the server.
+          </li>
           <li>
             If your account was suspended you will see a message explaining it - contact the academic
             support office.

@@ -198,6 +198,20 @@ const BASE_VISIBILITY = `
 `;
 
 /**
+ * The single projection behind every tutor card, wherever it is rendered
+ * (search results, landing page, dashboard suggestions).
+ *
+ * This exists because it did not: the landing page used a shorter SELECT that
+ * omitted `bio`, so the same tutor showed a description on /tutors and
+ * "No description added yet." on the homepage. One component, one query shape.
+ */
+const CARD_COLUMNS = `
+  u.id, u.full_name, u.created_at,
+  tp.headline, tp.bio, tp.mode, tp.campus,
+  tp.hourly_rate_cents, tp.years_experience, tp.rating_avg, tp.rating_count
+`;
+
+/**
  * Search published tutors.
  *
  * Every filter is optional and every value is bound as a parameter. Junk input
@@ -294,9 +308,7 @@ export function searchTutors({
   const current = Math.min(Math.max(1, Number(page) || 1), totalPages);
 
   const rows = db.all(
-    `SELECT u.id, u.full_name, u.created_at,
-            tp.headline, tp.bio, tp.mode, tp.campus, tp.hourly_rate_cents,
-            tp.years_experience, tp.rating_avg, tp.rating_count
+    `SELECT ${CARD_COLUMNS}
        FROM tutor_profiles tp
        JOIN users u ON u.id = tp.user_id
        ${clause}
@@ -357,8 +369,7 @@ export function getPublicTutor(tutorId) {
 export function featuredTutors(limit = 3) {
   const db = getDb();
   const rows = db.all(
-    `SELECT u.id, u.full_name, tp.headline, tp.mode, tp.hourly_rate_cents,
-            tp.rating_avg, tp.rating_count
+    `SELECT ${CARD_COLUMNS}
        FROM tutor_profiles tp
        JOIN users u ON u.id = tp.user_id
       WHERE ${BASE_VISIBILITY}
