@@ -1,0 +1,25 @@
+{
+  "name": "peerlearn",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PeerLearn - a campus peer tutoring platform (zero runtime dependencies)",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js",
+    "reset": "node scripts/reset.js",
+    "test": "node --env-file=.env.test --test \"tests/*.test.js\"",
+    "test:tap": "node --env-file=.env.test --test --test-reporter=tap \"tests/*.test.js\""
+  },
+  "keywords": [
+    "tutoring",
+    "education",
+    "peer-learning"
+  ],
+  "license": "MIT"
+}
