@@ -294,6 +294,37 @@ describe('authorisation over HTTP', () => {
     assert.equal(response.status, 403);
   });
 
+  test('an admin sees a read-only view of a booking, with no dead controls (PM-1)', async () => {
+    const slot = generateSlots(tutor.id)[7];
+    const booking = createBooking({
+      studentId: student.id,
+      tutorId: tutor.id,
+      subjectId: subject.id,
+      startsAt: slot.startsAt,
+    });
+
+    const adminClient = await signedIn('ada@test.local');
+    const detail = await adminClient.get(`/bookings/${booking.id}`);
+    assert.equal(detail.status, 200, 'an admin may inspect a booking');
+    assert.match(detail.text, /Read-only/);
+    assert.ok(!detail.text.includes('Cancel this session'), 'no cancel control is offered');
+    assert.ok(!detail.text.includes('Accept request'), 'no accept control is offered');
+    assert.ok(!detail.text.includes('Decline this request'), 'no decline control is offered');
+    assert.match(detail.text, /Sam Student/);
+    assert.match(detail.text, /Tara Tutor/);
+
+    // And the permission is still enforced if the request is forged by hand.
+    const { token } = await adminClient.csrf('/admin');
+    const forced = await adminClient.post(`/bookings/${booking.id}/cancel`, {
+      body: { _csrf: token, reason: 'Administrator attempting a participant action' },
+    });
+    assert.equal(forced.status, 403);
+
+    const student2 = await signedIn('sam@test.local');
+    const stillActive = await student2.get(`/bookings/${booking.id}`);
+    assert.match(stillActive.text, /Pending/);
+  });
+
   test('the notification API only ever counts the caller’s notifications', async () => {
     const tutorClient = await signedIn('tara@test.local');
     const tutorCount = (await tutorClient.get('/api/notifications/unread-count')).json().count;

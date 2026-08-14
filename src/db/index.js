@@ -197,6 +197,17 @@ export function closeDb() {
   }
 }
 
+/**
+ * Build a `LIKE` pattern that treats the user's text literally.
+ *
+ * Without this, `%` and `_` typed into a search box act as wildcards, so
+ * searching for "%" matches every row (PM-2). Pair with `ESCAPE '\'` in the SQL.
+ */
+export function likePattern(value, { prefix = '%', suffix = '%' } = {}) {
+  const escaped = String(value ?? '').replace(/[\\%_]/g, (character) => `\\${character}`);
+  return `${prefix}${escaped}${suffix}`;
+}
+
 /** Create an isolated, migrated database (tests, scripts). */
 export function createDatabase(file) {
   const database = new Database(file);

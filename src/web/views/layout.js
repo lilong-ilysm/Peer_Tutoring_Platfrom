@@ -148,11 +148,19 @@ ${
         <div class="site-header__end">
           ${user
             ? html`
-                <a class="icon-button" href="/notifications" aria-label="Notifications">
+                <a
+                  class="icon-button"
+                  href="/notifications"
+                  data-notification-link
+                  aria-label="${unreadNotifications > 0
+                    ? `Notifications: ${unreadNotifications} unread`
+                    : 'Notifications: none unread'}"
+                >
                   <span class="icon-button__icon" aria-hidden="true">${icons.bell}</span>
                   <span
                     class="${classNames('icon-button__badge', unreadNotifications === 0 && 'is-hidden')}"
                     data-notification-badge
+                    aria-hidden="true"
                     >${unreadNotifications}</span
                   >
                 </a>

@@ -7,7 +7,7 @@
  * profile they cannot book.
  */
 import config from '../config.js';
-import { getDb } from '../db/index.js';
+import { getDb, likePattern } from '../db/index.js';
 import { DomainError } from '../lib/errors.js';
 import { nowIso } from '../lib/time.js';
 import { hasAvailability } from './availability.js';
@@ -221,15 +221,18 @@ export function searchTutors({
   const params = [];
 
   if (q) {
+    // ESCAPE '\' plus likePattern() means % and _ typed by the user are matched
+    // literally instead of behaving as wildcards.
     where.push(`(
-      u.full_name LIKE ? OR tp.headline LIKE ? OR tp.bio LIKE ?
+      u.full_name LIKE ? ESCAPE '\\' OR tp.headline LIKE ? ESCAPE '\\' OR tp.bio LIKE ? ESCAPE '\\'
       OR EXISTS (
         SELECT 1 FROM tutor_subjects ts2
           JOIN subjects s2 ON s2.id = ts2.subject_id
-         WHERE ts2.tutor_id = u.id AND (s2.name LIKE ? OR s2.code LIKE ?)
+         WHERE ts2.tutor_id = u.id
+           AND (s2.name LIKE ? ESCAPE '\\' OR s2.code LIKE ? ESCAPE '\\')
       )
     )`);
-    const like = `%${q}%`;
+    const like = likePattern(q);
     params.push(like, like, like, like, like);
   }
 

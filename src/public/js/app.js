@@ -120,6 +120,14 @@
           if (!data || typeof data.count !== 'number') return;
           badge.textContent = String(data.count);
           badge.classList.toggle('is-hidden', data.count === 0);
+          // Keep the accessible name in step with the visual badge.
+          var link = badge.closest('[data-notification-link]');
+          if (link) {
+            link.setAttribute(
+              'aria-label',
+              data.count > 0 ? 'Notifications: ' + data.count + ' unread' : 'Notifications: none unread'
+            );
+          }
         })
         .catch(function () {
           /* offline or logged out: leave the server-rendered value alone */

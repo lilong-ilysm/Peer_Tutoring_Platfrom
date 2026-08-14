@@ -4,7 +4,7 @@
  * This is the only module that writes to `users`, `student_profiles` and
  * `tutor_profiles`, so account rules live in exactly one place.
  */
-import { getDb } from '../db/index.js';
+import { getDb, likePattern } from '../db/index.js';
 import { DomainError } from '../lib/errors.js';
 import { checkPasswordStrength, hashPassword, verifyPassword } from '../lib/security.js';
 import { nowIso } from '../lib/time.js';
@@ -190,8 +190,8 @@ export function listUsers({ search = '', role = '', status = '', page = 1, pageS
   const params = [];
 
   if (search) {
-    where.push('(full_name LIKE ? OR email LIKE ?)');
-    const like = `%${search}%`;
+    where.push("(full_name LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\')");
+    const like = likePattern(search);
     params.push(like, like);
   }
   if (ROLES.includes(role)) {

@@ -389,12 +389,16 @@ export function listBookingsForUser(user, { scope = 'upcoming', page = 1, pageSi
   const where = [];
   const params = [];
 
+  // Scoping is mandatory: an unrecognised role must fail loudly rather than
+  // silently return every booking on the platform.
   if (user.role === 'student') {
     where.push('b.student_id = ?');
     params.push(user.id);
   } else if (user.role === 'tutor') {
     where.push('b.tutor_id = ?');
     params.push(user.id);
+  } else {
+    throw new Error(`listBookingsForUser: unsupported role "${user.role}"`);
   }
 
   let order = 'b.starts_at ASC';

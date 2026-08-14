@@ -358,7 +358,8 @@ export function tutorProfilePage({
                             ${review.student_name}
                           </span>
                           <span class="chips">
-                            ${stars(review.rating, 1)} ${timeTag(review.created_at, { relative: true })}
+                            ${stars(review.rating, 1, { compact: true })}
+                            ${timeTag(review.created_at, { relative: true })}
                           </span>
                         </div>
                         <p class="review__comment">${review.comment || 'No comment left.'}</p>

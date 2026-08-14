@@ -78,7 +78,10 @@ function declineForm(booking, csrfToken) {
 export function sessionCard(booking, { viewer, csrfToken, showActions = true }) {
   const other = counterpartOf(booking, viewer);
   const isTutor = viewer.id === booking.tutor_id;
+  const isParticipant = isTutor || viewer.id === booking.student_id;
   const canAct = ACTIVE.has(booking.status);
+  // Non-participants (administrators) get the information, never the controls.
+  const withActions = showActions && isParticipant;
 
   return html`
     <article class="session">
@@ -99,7 +102,7 @@ export function sessionCard(booking, { viewer, csrfToken, showActions = true }) 
           : raw('')}
       </div>
 
-      ${showActions
+      ${withActions
         ? html`<div class="session__actions">
             ${isTutor && booking.status === 'pending'
               ? html`<form method="post" action="/bookings/${booking.id}/accept">
@@ -162,12 +165,15 @@ export function bookingsPage({ viewer, scope, results, csrfToken, counts }) {
           : html`<a class="btn btn--secondary" href="/profile/availability">Manage availability</a>`,
     })}
 
-    ${tabs([
-      { label: 'Upcoming', href: '/bookings?scope=upcoming', active: scope === 'upcoming', count: counts.upcoming },
-      { label: 'Pending', href: '/bookings?scope=pending', active: scope === 'pending', count: counts.pending },
-      { label: 'Past', href: '/bookings?scope=past', active: scope === 'past' },
-      { label: 'All', href: '/bookings?scope=all', active: scope === 'all', count: counts.total },
-    ])}
+    ${tabs(
+      [
+        { label: 'Upcoming', href: '/bookings?scope=upcoming', active: scope === 'upcoming', count: counts.upcoming },
+        { label: 'Pending', href: '/bookings?scope=pending', active: scope === 'pending', count: counts.pending },
+        { label: 'Past', href: '/bookings?scope=past', active: scope === 'past' },
+        { label: 'All', href: '/bookings?scope=all', active: scope === 'all', count: counts.total },
+      ],
+      { label: 'Filter sessions' }
+    )}
 
     ${results.rows.length === 0
       ? html`<div class="card">${emptyState({ icon: 'calendar', ...emptyCopy })}</div>`
@@ -182,11 +188,14 @@ export function bookingDetailPage({ booking, viewer, csrfToken, timeline, review
   const other = counterpartOf(booking, viewer);
   const isTutor = viewer.id === booking.tutor_id;
   const isStudent = viewer.id === booking.student_id;
+  const isParticipant = isTutor || isStudent;
   const canReview = isStudent && booking.status === 'completed' && !review;
 
   return html`
     ${pageHeader({
-      title: `${booking.subject_name} with ${other.name}`,
+      title: isParticipant
+        ? `${booking.subject_name} with ${other.name}`
+        : `${booking.subject_name}: ${booking.student_name} with ${booking.tutor_name}`,
       subtitle: formatDateTime(booking.starts_at, { withZone: true }),
       actions: html`<a class="btn btn--ghost" href="/bookings">Back to sessions</a>`,
     })}
@@ -256,7 +265,16 @@ export function bookingDetailPage({ booking, viewer, csrfToken, timeline, review
           </div>
 
           ${isTutor && booking.status === 'pending' ? declineForm(booking, csrfToken) : raw('')}
-          ${ACTIVE.has(booking.status) ? cancelForm(booking, csrfToken) : raw('')}
+          ${isParticipant && ACTIVE.has(booking.status) ? cancelForm(booking, csrfToken) : raw('')}
+          ${isParticipant
+            ? raw('')
+            : html`<p class="alert alert--info" role="status">
+                <span class="alert__label">Read-only:</span>
+                <span>
+                  You are viewing this session as an administrator. Only the student and the tutor can
+                  accept, decline or cancel it.
+                </span>
+              </p>`}
         </section>
 
         ${canReview
@@ -326,7 +344,15 @@ export function bookingDetailPage({ booking, viewer, csrfToken, timeline, review
         </section>
 
         <section class="card">
-          <h2 class="card__title">${other.role === 'tutor' ? 'Your tutor' : 'Your student'}</h2>
+          <h2 class="card__title">
+            ${isParticipant
+              ? other.role === 'tutor'
+                ? 'Your tutor'
+                : 'Your student'
+              : other.role === 'tutor'
+                ? 'Tutor'
+                : 'Student'}
+          </h2>
           <p class="chips">${avatar(other.name, { size: 'md', id: other.id })} ${other.name}</p>
           ${other.role === 'tutor'
             ? html`<a class="btn btn--secondary btn--block" href="/tutors/${other.id}">View profile</a>`

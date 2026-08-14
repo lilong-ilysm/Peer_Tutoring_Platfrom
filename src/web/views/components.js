@@ -268,7 +268,14 @@ export const MODE_LABELS = {
   both: 'Online or in person',
 };
 
-export function stars(average, count) {
+/**
+ * Star rating.
+ *
+ * `compact` renders one individual rating (a single review) without a review
+ * count, because "5.0 (1 review)" beside every review reads as if each review
+ * has its own tally.
+ */
+export function stars(average, count, { compact = false } = {}) {
   const value = Number(average) || 0;
   const rounded = Math.round(value * 2) / 2;
   const glyphs = [];
@@ -277,6 +284,15 @@ export function stars(average, count) {
     else if (rounded >= i - 0.5) glyphs.push('◐');
     else glyphs.push('☆');
   }
+
+  if (compact) {
+    return html`<span class="rating">
+      <span class="rating__stars" aria-hidden="true">${glyphs.join('')}</span>
+      <span class="rating__text">${value.toFixed(1)}</span>
+      <span class="sr-only">Rated ${value.toFixed(1)} out of 5</span>
+    </span>`;
+  }
+
   if (!count) {
     return html`<span class="rating rating--none">
       <span class="rating__stars" aria-hidden="true">☆☆☆☆☆</span>
@@ -382,21 +398,26 @@ export function pagination({ page, totalPages, buildHref, label = 'Results' }) {
   `;
 }
 
-export function tabs(items) {
+/**
+ * Filter tabs.
+ *
+ * These are links that navigate, not ARIA tabs (there is no tabpanel), so they
+ * are marked up as navigation with `aria-current` instead of `role="tab"`.
+ */
+export function tabs(items, { label = 'Filter' } = {}) {
   return html`
-    <div class="tabs" role="tablist" aria-label="Filter">
+    <nav class="tabs" aria-label="${label}">
       ${items.map(
         (item) => html`<a
           class="${classNames('tab', item.active && 'tab--active')}"
           href="${safeUrl(item.href, '/')}"
-          role="tab"
-          aria-selected="${item.active ? 'true' : 'false'}"
+          ${attrs({ 'aria-current': item.active ? 'page' : undefined })}
           >${item.label}${item.count !== undefined
             ? html` <span class="tab__count">${item.count}</span>`
             : raw('')}</a
         >`
       )}
-    </div>
+    </nav>
   `;
 }
 
