@@ -15,8 +15,9 @@ no package installs, no external database server.
 
 ## Requirements
 
-- **Node.js 22.5 or newer** (24 LTS recommended). The app uses the built-in `node:sqlite` module,
-  the built-in test runner and `--env-file`, so nothing else is needed.
+- **Node.js 22.13 or newer** (24 recommended). The app uses the built-in `node:sqlite` module,
+  the built-in test runner and `--env-file`, so nothing else is needed. Node 22.5–22.12 shipped
+  `node:sqlite` behind `--experimental-sqlite`; from 22.13 it needs no flag.
 - No database server, no compiler, no `npm install`.
 
 Check your version:
@@ -184,6 +185,62 @@ npm test
 
 Each suite runs against its own temporary SQLite database, so tests are isolated and leave nothing
 behind.
+
+## Deploying
+
+The database is a file on disk, so the host must give the process a **persistent volume**. Any
+container host with disks works (Railway, Render, Fly.io, a VPS). Serverless platforms such as
+Vercel or Netlify Functions do **not** — their filesystem is ephemeral and per-instance, so bookings
+and accounts would silently disappear. Run **one instance**: SQLite has a single writer and the rate
+limiter is in-process.
+
+### Railway (worked example)
+
+`railway.json` in the repo root already sets the start command, health check and restart policy.
+Values in that file override the dashboard for the deployment that uses it.
+
+1. **Create the service** — Railway → *New Project* → *Deploy from GitHub repo* → pick this repo.
+   No build command is needed; there are no dependencies to install.
+2. **Add a volume** — right-click the project canvas → *Volume* → attach it to the service with
+   mount path **`/data`**. (Railway puts your code in `/app`, so a separate `/data` mount keeps the
+   database away from the deployment bundle.)
+3. **Set variables** on the service:
+   ```
+   NODE_ENV=production
+   SESSION_SECRET=<64 hex characters>
+   DATABASE_FILE=/data/peerlearn.db
+   APP_TIMEZONE=Africa/Johannesburg     # your institution's timezone
+   APP_NAME=PeerLearn
+   CURRENCY_SYMBOL=R
+   RAILPACK_NODE_VERSION=24             # NIXPACKS_NODE_VERSION=24 on older builders
+   ```
+   Generate the secret with:
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+   Do **not** set `PORT` (Railway injects it) and do not set `HOST` (the start command binds
+   `0.0.0.0`, which is what makes the container reachable).
+4. **Deploy**, then *Settings → Networking → Generate Domain*.
+5. **Create the first admin.** Migrations run automatically at boot; demo data does not. Either:
+   - open a shell on the running service (`railway ssh`, or the service's terminal) and run
+     `npm run seed` — it is idempotent and refuses to overwrite a database that already has users; or
+   - temporarily set the start command to `node scripts/seed.js && npm start` for one deploy; or
+   - skip seeding entirely, register a real account, and promote it to admin:
+     ```bash
+     node -e "const {getDb}=await import('./src/db/index.js');getDb().run(\"UPDATE users SET role='admin' WHERE email=?\",['you@example.edu'])" --input-type=module
+     ```
+   If you seed, set `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` first and change the password after
+   first login.
+
+**Troubleshooting:** a failing health check almost always means the process bound to `127.0.0.1`
+instead of `0.0.0.0`. A `SESSION_SECRET must be set…` boot error means step 3 was skipped —
+that check is deliberate. If the app starts but data resets on redeploy, the volume is not mounted at
+the path in `DATABASE_FILE`.
+
+### Backups
+
+The whole database is one file. With the volume mounted, copy `/data/peerlearn.db` (plus `-wal`
+and `-shm` if present) on a schedule, or run `sqlite3 /data/peerlearn.db ".backup /data/backup.db"`.
 
 ## Accessibility and responsiveness
 
