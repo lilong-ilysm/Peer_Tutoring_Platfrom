@@ -121,6 +121,16 @@ export function sendMessage({ conversationId, senderId, body }) {
   const sender = findUserById(senderId);
   const other = counterpart(conversation, senderId);
 
+  // Do not let someone write into a void: a suspended account cannot sign in,
+  // so a message to them would never be read (QA improvement IMP-4).
+  const recipient = findUserById(other.id);
+  if (!recipient || recipient.status !== 'active') {
+    throw new DomainError(
+      'That account is currently unavailable, so the message was not sent. Contact the academic support office if you need help.',
+      { status: 409, code: 'recipient_unavailable' }
+    );
+  }
+
   const message = db.transaction(() => {
     const { lastInsertRowid } = db.run(
       'INSERT INTO messages (conversation_id, sender_id, body, created_at) VALUES (?, ?, ?, ?)',

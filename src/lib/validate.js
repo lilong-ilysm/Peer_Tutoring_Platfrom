@@ -250,20 +250,31 @@ function humanise(field) {
  * ignored or clamped rather than rejected.
  * ------------------------------------------------------------------------- */
 
-export function coerceInt(value, fallback, { min = -Infinity, max = Infinity } = {}) {
+/**
+ * @param {unknown} value raw query value
+ * @param {number|null} fallback used when the value is absent or unusable
+ * @param {{min?:number, max?:number, clamp?:boolean}} [options]
+ *   `clamp: true` pulls an out-of-range number into range (right for a page
+ *   number). `clamp: false` discards it (right for an identifier or a weekday:
+ *   clamping `?subject=0` to 1 would silently apply a filter the user never
+ *   asked for).
+ */
+export function coerceInt(value, fallback, { min = -Infinity, max = Infinity, clamp = true } = {}) {
   const text = Array.isArray(value) ? value[0] : value;
   if (text === undefined || text === null || String(text).trim() === '') return fallback;
   const parsed = Number.parseInt(String(text).trim(), 10);
   if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(max, Math.max(min, parsed));
+  if (parsed < min || parsed > max) return clamp ? Math.min(max, Math.max(min, parsed)) : fallback;
+  return parsed;
 }
 
-export function coerceFloat(value, fallback, { min = -Infinity, max = Infinity } = {}) {
+export function coerceFloat(value, fallback, { min = -Infinity, max = Infinity, clamp = true } = {}) {
   const text = Array.isArray(value) ? value[0] : value;
   if (text === undefined || text === null || String(text).trim() === '') return fallback;
   const parsed = Number.parseFloat(String(text).trim());
   if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(max, Math.max(min, parsed));
+  if (parsed < min || parsed > max) return clamp ? Math.min(max, Math.max(min, parsed)) : fallback;
+  return parsed;
 }
 
 export function coerceEnum(value, allowed, fallback = null) {

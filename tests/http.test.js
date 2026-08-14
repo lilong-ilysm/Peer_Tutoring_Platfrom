@@ -65,6 +65,27 @@ describe('public pages', () => {
     assert.ok(!junk.text.includes('<img src=x'), 'the query echo is escaped');
   });
 
+  test('out-of-range filters are ignored, not clamped into a different filter (QA-01..03)', async () => {
+    const client = agent();
+    const cards = (text) => (text.match(/class="tutor-card"/g) || []).length;
+    const baseline = cards((await client.get('/tutors')).text);
+    assert.ok(baseline > 0, 'there is at least one published tutor to count');
+
+    for (const query of ['?subject=0', '?day=99', '?day=-3', '?rating=9', '?maxRate=-5']) {
+      const response = await client.get(`/tutors${query}`);
+      assert.equal(response.status, 200, `${query} should render`);
+      assert.equal(
+        cards(response.text),
+        baseline,
+        `${query} must not silently apply a filter the visitor never asked for`
+      );
+    }
+
+    // A valid weekday still filters.
+    const monday = await client.get('/tutors?day=1');
+    assert.equal(monday.status, 200);
+  });
+
   test('unknown pages and unknown tutors return 404', async () => {
     const client = agent();
     assert.equal((await client.get('/nope')).status, 404);

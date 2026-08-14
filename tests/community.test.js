@@ -23,6 +23,7 @@ import {
   setReviewHidden,
 } from '../src/services/reviews.js';
 import { getTutorProfile, searchTutors } from '../src/services/tutors.js';
+import { setUserStatus } from '../src/services/users.js';
 import { useTempDatabase } from './helpers/database.js';
 import { makeStudent, makeTutor } from './helpers/factory.js';
 
@@ -266,6 +267,24 @@ describe('messaging', () => {
     const after = listMessages(conversation.id, { afterId: first.id });
     assert.equal(after.length, 1);
     assert.equal(after[0].id, second.id);
+  });
+
+  test('messages to a suspended account are refused with an explanation (IMP-4)', () => {
+    const { user: tutor } = makeTutor();
+    const student = makeStudent();
+    const conversation = getOrCreateConversation(student.id, tutor.id);
+    sendMessage({ conversationId: conversation.id, senderId: student.id, body: 'Before suspension' });
+
+    setUserStatus(tutor.id, 'suspended');
+    assert.throws(
+      () => sendMessage({ conversationId: conversation.id, senderId: student.id, body: 'After suspension' }),
+      (error) => error instanceof DomainError && /currently unavailable/.test(error.message)
+    );
+
+    setUserStatus(tutor.id, 'active');
+    assert.ok(
+      sendMessage({ conversationId: conversation.id, senderId: student.id, body: 'After reinstatement' })
+    );
   });
 
   test('a tutor cannot be the student side of a conversation', () => {

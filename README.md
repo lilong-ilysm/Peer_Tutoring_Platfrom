@@ -166,15 +166,21 @@ Tutor `rating_avg` / `rating_count` are derived from visible reviews and recompu
 npm test
 ```
 
-133 checks across 8 suites, using only the built-in runner:
+**228 checks across 43 suites**, using only the built-in runner:
 
-- `security.test.js` — hashing, tokens, signing, escaping, redirect safety
+- `security.test.js` — hashing, tokens, signing, output escaping, redirect safety, query coercion
 - `time.test.js` — clock parsing, calendar maths, timezone/DST conversion
-- `auth.test.js` — registration, login, sessions, suspension, password change revocation
+- `auth.test.js` — registration, login, sessions, suspension, password-change revocation
 - `availability.test.js` — block validation, slot generation (lead time, window, time off, taken slots)
-- `bookings.test.js` — lifecycle, authorisation, double-booking, request caps, auto-completion
-- `community.test.js` — review gating and rating aggregates, messaging rules and unread counts
-- `http.test.js` — end-to-end pipeline: guards, CSRF, 404/405, XSS escaping, cross-user access
+- `bookings.test.js` — lifecycle, authorisation, double-booking, request caps, auto-settlement
+- `search.test.js` — every filter individually and combined, sorting, pagination, visibility rules,
+  literal `LIKE` characters, rendered empty state
+- `profile.test.js` — student profile persistence, tutor profile validation, subjects, publish gate
+- `community.test.js` — review gating and rating aggregates, messaging rules, unread counts
+- `admin.test.js` — suspend/reinstate, subject catalogue, review moderation, stats, audit trail
+- `views.test.js` — error page, accessible form markup, page shell, no inline script or style
+- `http.test.js` — end-to-end pipeline: guards, CSRF, 404/405, XSS escaping, cross-user access,
+  admin read-only view, filter coercion
 
 Each suite runs against its own temporary SQLite database, so tests are isolated and leave nothing
 behind.
@@ -202,6 +208,11 @@ screen readers and expert review.
 - **No rescheduling.** Cancel and rebook is the v1 answer.
 - **No file uploads.** Avatars are generated initials.
 - Real-time updates use polling (15s messages, 60s notification badge), not websockets.
+- **The UI has not been verified in a browser.** It was built and reviewed as markup and CSS with
+  breakpoints at 960/720/400px, but no human has looked at a rendered page in this environment, so
+  visual layout, focus-ring visibility and contrast in situ are unconfirmed. See
+  [`docs/03-qa-report.md`](docs/03-qa-report.md) section 4.
+- Login rate limiting is per source address, not per account.
 
 ## Licence
 

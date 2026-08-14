@@ -13,6 +13,7 @@ import {
 } from '../src/lib/security.js';
 import { escapeHtml, html, raw, safeUrl } from '../src/web/views/html.js';
 import { safeNextPath } from '../src/lib/http.js';
+import { coerceEnum, coerceFloat, coerceInt, coerceString } from '../src/lib/validate.js';
 
 describe('password hashing', () => {
   test('a password verifies against its own hash', () => {
@@ -130,5 +131,36 @@ describe('redirect safety', () => {
     assert.equal(safeNextPath('/x\\y'), '/dashboard');
     assert.equal(safeNextPath('/a\nb'), '/dashboard');
     assert.equal(safeNextPath(undefined), '/dashboard');
+  });
+});
+
+describe('query-string coercion', () => {
+  test('unusable values fall back instead of throwing', () => {
+    assert.equal(coerceInt('abc', 7), 7);
+    assert.equal(coerceInt('', 7), 7);
+    assert.equal(coerceInt(undefined, 7), 7);
+    assert.equal(coerceInt(['9', '4'], 7), 9, 'the first repeated value wins');
+    assert.equal(coerceFloat('not-a-number', 1.5), 1.5);
+  });
+
+  test('clamping is opt-in, because clamping an identifier changes its meaning', () => {
+    // Page numbers should clamp.
+    assert.equal(coerceInt('-42', 1, { min: 1, max: 100 }), 1);
+    assert.equal(coerceInt('9999', 1, { min: 1, max: 100 }), 100);
+
+    // Identifiers and weekdays must be discarded, not clamped (QA-01..03).
+    assert.equal(coerceInt('0', null, { min: 1, max: 1e9, clamp: false }), null);
+    assert.equal(coerceInt('99', null, { min: 0, max: 6, clamp: false }), null);
+    assert.equal(coerceInt('-3', null, { min: 0, max: 6, clamp: false }), null);
+    assert.equal(coerceInt('3', null, { min: 0, max: 6, clamp: false }), 3);
+    assert.equal(coerceFloat('9', null, { min: 0, max: 5, clamp: false }), null);
+    assert.equal(coerceFloat('4.5', null, { min: 0, max: 5, clamp: false }), 4.5);
+  });
+
+  test('enum and string coercion are bounded', () => {
+    assert.equal(coerceEnum('online', ['online', 'in_person'], null), 'online');
+    assert.equal(coerceEnum('telepathy', ['online', 'in_person'], null), null);
+    assert.equal(coerceString('  spaced   out  ', { max: 80 }), 'spaced out');
+    assert.equal(coerceString('x'.repeat(500), { max: 10 }).length, 10);
   });
 });

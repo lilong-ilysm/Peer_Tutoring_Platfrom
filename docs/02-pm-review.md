@@ -156,5 +156,28 @@ now PASS** on test evidence. AC-43 remains PARTIAL by design (no navigation prog
 server-rendered app; mutations do show a pending state) and **AC-42 remains NOT VERIFIED** — that
 needs a human with a browser.
 
-**Decision: APPROVED FOR QA** (round 1 → 2), and after the QA cycle documented in
-`03-qa-report.md`, **APPROVED** with the two caveats above recorded in the final report.
+**Decision at this point: APPROVED FOR QA.**
+
+---
+
+## Round 3 — after the QA cycle
+
+QA ran its own adversarial pass (see [`03-qa-report.md`](03-qa-report.md)) and found one defect I had
+missed, plus one behavioural gap:
+
+| From QA | Severity | Outcome |
+|---|---|---|
+| **BUG-001** — out-of-range numeric filters (`?subject=0`, `?day=99`, `?day=-3`) were clamped, so search silently applied a filter the visitor never chose and showed 2 of 6 tutors as if that were the whole truth | MEDIUM | **Fixed.** `coerceInt`/`coerceFloat` gained a `clamp` option; identifiers, weekday and rating/rate now discard out-of-range input. Covered by a unit test and an HTTP test that counts result cards. Re-probed: 6 of 6 in every case. |
+| **IMP-1** — messages could be sent into a suspended user's conversation, where they could never be read | LOW | **Fixed.** `sendMessage` refuses with a clear explanation; test added. |
+| IMP-2, IMP-3, IMP-4, IMP-5, IMP-6 | LOW/INFO | Deferred with reasons recorded in the QA report. I agree with each deferral; none blocks release. |
+
+Final state of the evidence I care about as PM:
+
+- Automated suite: **228 checks, 43 suites, 0 failures.**
+- Scripted walkthrough: 67 assertions, all passing.
+- Adversarial probe: 55 checks, all passing (was 52/3 before BUG-001 was fixed).
+- Requirements audit: **48 of 50 PASS, 1 PARTIAL by design (AC-43), 1 NOT VERIFIED (AC-42).**
+
+**Final decision: APPROVED.** Two things go into the final report as open items rather than being
+quietly dropped: AC-42 needs a human with a browser, and AC-43's "loading affordance" is limited to
+the submit-once state on mutations, which I accept for a server-rendered application.

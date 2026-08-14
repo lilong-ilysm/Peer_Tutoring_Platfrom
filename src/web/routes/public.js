@@ -23,12 +23,15 @@ import { pageFromQuery } from './helpers.js';
 function readFilters(query) {
   return {
     q: coerceString(query.q, { max: 80 }),
-    subjectId: coerceInt(query.subject, null, { min: 1, max: 1e9 }),
+    // Identifier-like and enum-like values are discarded when out of range
+    // rather than clamped, so `?subject=0` or `?day=99` cannot silently apply a
+    // filter the visitor never asked for (QA-01, QA-02, QA-03).
+    subjectId: coerceInt(query.subject, null, { min: 1, max: 1e9, clamp: false }),
     level: coerceEnum(query.level, SUBJECT_LEVELS, null),
     mode: coerceEnum(query.mode, ['online', 'in_person'], null),
-    minRating: coerceFloat(query.rating, null, { min: 0, max: 5 }),
-    maxRate: coerceInt(query.maxRate, null, { min: 0, max: 100000 }),
-    weekday: coerceInt(query.day, null, { min: 0, max: 6 }),
+    minRating: coerceFloat(query.rating, null, { min: 0, max: 5, clamp: false }),
+    maxRate: coerceInt(query.maxRate, null, { min: 0, max: 100000, clamp: false }),
+    weekday: coerceInt(query.day, null, { min: 0, max: 6, clamp: false }),
     sort: coerceEnum(query.sort, SORT_OPTIONS, 'rating'),
     page: pageFromQuery(query),
   };

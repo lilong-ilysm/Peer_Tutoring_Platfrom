@@ -107,7 +107,9 @@ Things a maintainer should know before changing code:
 
 Verified by execution:
 
-- `npm test` — 133 checks, 8 suites, all passing (unit + HTTP integration against the real pipeline).
+- `npm test` — 228 checks, 43 suites, all passing (unit + HTTP integration against the real pipeline).
+- A 55-check adversarial probe and a 67-assertion scripted walkthrough against a live seeded server,
+  including a genuine concurrency test (two simultaneous requests for one slot; exactly one wins).
 - A scripted walkthrough against a seeded server covering: landing, search (including junk filters),
   tutor profile, login/logout, student dashboard, sessions, messages, notifications, profile,
   request a session, tutor accept, tutor availability add/reject, admin console pages, and every
@@ -124,8 +126,8 @@ Verified by execution:
   (320 / 768 / 1280px breakpoints), focus-ring appearance, colour contrast in situ and screen-reader
   behaviour were implemented to the spec and reviewed in markup and CSS, but not seen. They need a
   human pass before anyone calls the UI signed off.
-- Behaviour under real concurrency (two simultaneous requests for the same slot). The invariant is
-  enforced by a transaction plus a database unique index, and the index is proven by a test that
-  bypasses the service layer — but no load test was run.
+- Behaviour under sustained load. Two simultaneous requests for the same slot *were* tested during QA
+  (exactly one won, the loser got a clear message), and the unique index is proven by a test that
+  bypasses the service layer — but no load or soak test was run.
 - Production deployment concerns: TLS termination, `Secure` cookie behaviour and HSTS were coded for
   `NODE_ENV=production` but exercised only in development mode.
